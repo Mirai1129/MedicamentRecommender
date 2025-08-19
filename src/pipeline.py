@@ -17,11 +17,11 @@ from __future__ import annotations
 import argparse
 import os
 import signal
+import subprocess as sp
 import sys
 import time
 from pathlib import Path
 from typing import Iterable, Tuple
-import subprocess as sp
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]  # 專案根目錄（假設 src/ 為專案子目錄）
 PYTHON = sys.executable  # 使用當前解譯器，避免 venv 混用

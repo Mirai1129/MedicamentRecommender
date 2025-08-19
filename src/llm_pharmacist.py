@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-
 # OpenAI SDK v1.x
 # pip install "openai>=1.0.0"
 from openai import OpenAI, APIError, APITimeoutError, RateLimitError
@@ -43,14 +42,14 @@ def get_env(key: str, required: bool = True) -> Optional[str]:
 
 
 def call_openai(
-    client: OpenAI,
-    model: str,
-    system_prompt: str,
-    user_input: str,
-    max_tokens: int = 2048,
-    temperature: float = 0.2,
-    timeout_s: int = 60,
-    max_retries: int = 3,
+        client: OpenAI,
+        model: str,
+        system_prompt: str,
+        user_input: str,
+        max_tokens: int = 2048,
+        temperature: float = 0.2,
+        timeout_s: int = 60,
+        max_retries: int = 3,
 ) -> str:
     """
     以 Chat Completions 取得單段文字輸出，含基本重試與超時。
@@ -86,8 +85,8 @@ def main() -> int:
     load_dotenv()
 
     # 讀取環境變數
-    api_key = get_env("OPENAI_API", required=True)   # 使用 OPENAI_API
-    model = get_env("OPENAI_MODEL", required=True)   # e.g. gpt-4.1
+    api_key = get_env("OPENAI_API", required=True)  # 使用 OPENAI_API
+    model = get_env("OPENAI_MODEL", required=True)  # e.g. gpt-4.1
 
     # 準備 OpenAI 客戶端（也可在此統一設定預設 timeout）
     client = OpenAI(api_key=api_key)

@@ -4,7 +4,7 @@ from sentence_transformers import SentenceTransformer
 
 # 指定模型名稱與自訂快取資料夾
 model_name = 'ckiplab/bert-base-chinese'
-model_cache_path = 'models/CKIP'  # ❗自訂的模型儲存資料夾
+model_cache_path = 'CKIP'  # ❗自訂的模型儲存資料夾
 
 print(f"🚀 [1/3] 開始載入模型：{model_name}")
 t0 = time.time()

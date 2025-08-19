@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -35,7 +34,6 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
-
 
 # ----------------------------
 # Utilities
@@ -130,19 +128,19 @@ def extract_text(record: Dict, preferred_key: Optional[str] = None) -> Tuple[str
 # ----------------------------
 
 def embed_corpus(
-    texts: List[str],
-    tokenizer: AutoTokenizer,
-    model: AutoModel,
-    device: torch.device,
-    batch_size: int = 64,
-    max_length: int = 512,
+        texts: List[str],
+        tokenizer: AutoTokenizer,
+        model: AutoModel,
+        device: torch.device,
+        batch_size: int = 64,
+        max_length: int = 512,
 ) -> np.ndarray:
     model.eval()
     all_vecs: List[np.ndarray] = []
 
     with torch.no_grad():
         for i in tqdm(range(0, len(texts), batch_size), desc="Embedding"):
-            batch = texts[i : i + batch_size]
+            batch = texts[i: i + batch_size]
             encoded = tokenizer(
                 batch,
                 padding=True,
@@ -202,7 +200,7 @@ def main():
     # 載入模型
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModel.from_pretrained(model_dir)
+    model = AutoModel.from_pretrained(model_dir, add_pooling_layer=False).to(device)
     model.to(device)
 
     # 讀取 JSONL

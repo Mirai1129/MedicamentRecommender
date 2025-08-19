@@ -14,14 +14,13 @@
 """
 
 from __future__ import annotations
+
 import argparse
 from pathlib import Path
-from typing import Optional
-
 
 DEFAULT_QUESTION = Path("data/interim/user_input/test_question.txt")
-DEFAULT_COMPARE  = Path("data/interim/case_annex/compare_result.txt")
-DEFAULT_OUTPUT   = Path("data/interim/case_annex/annex_consequent.txt")
+DEFAULT_COMPARE = Path("data/interim/case_annex/compare_result.txt")
+DEFAULT_OUTPUT = Path("data/interim/case_annex/annex_consequent.txt")
 
 
 def read_text(path: Path) -> str:
@@ -76,8 +75,8 @@ def write_text(path: Path, content: str) -> None:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="合併提問與匹配結果，輸出成 annex_consequent.txt")
     p.add_argument("--question", type=Path, default=DEFAULT_QUESTION, help="使用者提問檔案路徑")
-    p.add_argument("--compare",  type=Path, default=DEFAULT_COMPARE,  help="匹配結果檔案路徑")
-    p.add_argument("--output",   type=Path, default=DEFAULT_OUTPUT,   help="輸出檔案路徑")
+    p.add_argument("--compare", type=Path, default=DEFAULT_COMPARE, help="匹配結果檔案路徑")
+    p.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="輸出檔案路徑")
     return p.parse_args()
 
 
@@ -86,7 +85,7 @@ def main() -> int:
 
     try:
         question_text = read_text(args.question)
-        compare_text  = read_text(args.compare)
+        compare_text = read_text(args.compare)
     except FileNotFoundError as e:
         print(f"✗ 讀檔失敗：{e}")
         return 1

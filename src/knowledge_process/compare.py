@@ -34,12 +34,11 @@ import argparse
 import io
 import json
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
 from transformers import AutoModel, AutoTokenizer
-from tqdm import tqdm
 
 # 與向量化一致的候選鍵
 CANDIDATE_TEXT_KEYS = (
@@ -119,7 +118,7 @@ def extract_text(record: Dict) -> str:
 
 def embed_queries(queries: List[str], model_dir: Path, device: torch.device, max_length: int = 128) -> np.ndarray:
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModel.from_pretrained(model_dir).to(device)
+    model = AutoModel.from_pretrained(model_dir, add_pooling_layer=False).to(device)
     model.eval()
 
     vecs: List[np.ndarray] = []
@@ -136,10 +135,10 @@ def embed_queries(queries: List[str], model_dir: Path, device: torch.device, max
 
 
 def search_similar(
-    emb_matrix: np.ndarray,  # [N, D] 預期已 L2-normalized
-    query_vec: np.ndarray,   # [D] 已 L2-normalized
-    top_k: int = 10,
-    threshold: float = 0.35,
+        emb_matrix: np.ndarray,  # [N, D] 預期已 L2-normalized
+        query_vec: np.ndarray,  # [D] 已 L2-normalized
+        top_k: int = 10,
+        threshold: float = 0.35,
 ) -> List[Tuple[int, float]]:
     # 餘弦相似度 = 內積（已經 L2 normalize）
     sims = emb_matrix @ query_vec  # [N]
@@ -160,11 +159,13 @@ def search_similar(
 def main():
     ap = argparse.ArgumentParser(description="Compare query terms to medicine embeddings and export matches.")
     ap.add_argument("--queries", type=str, default=str(Path("data/interim/case_annex/extract_result.json")))
-    ap.add_argument("--embeddings", type=str, default=str(Path("data/processed/vector/medicine_completion/embeddings.npy")))
+    ap.add_argument("--embeddings", type=str,
+                    default=str(Path("data/processed/vector/medicine_completion/embeddings.npy")))
     ap.add_argument("--ids", type=str, default=str(Path("data/processed/vector/medicine_completion/ids.jsonl")))
     ap.add_argument("--raw", type=str, default=str(Path("data/raw/medicine_completion.jsonl")))
     ap.add_argument("--out", type=str, default=str(Path("data/interim/case_annex/compare_result.txt")))
-    ap.add_argument("--model-dir", type=str, default=str(Path("models/CKIP/models--ckiplab--bert-base-chinese/snapshots")))
+    ap.add_argument("--model-dir", type=str,
+                    default=str(Path("models/CKIP/models--ckiplab--bert-base-chinese/snapshots")))
     ap.add_argument("--top-k", type=int, default=10)
     ap.add_argument("--threshold", type=float, default=0.35)
     args = ap.parse_args()

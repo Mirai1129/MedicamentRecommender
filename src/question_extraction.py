@@ -35,7 +35,6 @@ except Exception as e:  # 更精確地提醒使用者缺套件
     )
     sys.exit(1)
 
-
 # ----------- 常量與路徑設定 -----------
 PROJECT_ROOT = Path(__file__).resolve().parents[1]  # 專案根目錄（預期 src/ 之上）
 PROMPT_PATH = PROJECT_ROOT / "prompt" / "case_extraction.txt"
@@ -80,7 +79,7 @@ def ensure_parent_dir(path: Path) -> None:
 
 
 def call_openai_responses(
-    client: OpenAI, model: str, system_prompt: str, user_content: str
+        client: OpenAI, model: str, system_prompt: str, user_content: str
 ) -> str:
     """
     使用 Responses API 呼叫模型。
@@ -117,7 +116,7 @@ def _fallback_collect_text(resp) -> str:
 
 
 def robust_generate(
-    client: OpenAI, model: str, system_prompt: str, user_content: str
+        client: OpenAI, model: str, system_prompt: str, user_content: str
 ) -> str:
     """帶重試的請求流程，處理網路錯誤與限速。"""
     last_err: Optional[Exception] = None
