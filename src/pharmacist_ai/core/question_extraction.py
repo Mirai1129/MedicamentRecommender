@@ -36,7 +36,7 @@ except Exception as e:  # 更精確地提醒使用者缺套件
     sys.exit(1)
 
 # ----------- 常量與路徑設定 -----------
-PROJECT_ROOT = Path(__file__).resolve().parents[1]  # 專案根目錄（預期 src/ 之上）
+PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
 PROMPT_PATH = PROJECT_ROOT / "prompt" / "case_extraction.txt"
 USER_INPUT_PATH = PROJECT_ROOT / "data" / "interim" / "user_input" / "test_question.txt"
 OUTPUT_PATH = PROJECT_ROOT / "data" / "interim" / "case_annex" / "extract_result.json"
