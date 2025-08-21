@@ -40,9 +40,6 @@ from transformers import AutoModel, AutoTokenizer
 
 from src import PROJECT_ROOT
 
-# 取得專案根目錄，這能確保無論腳本在哪裡執行，路徑都是正確的
-# PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
-
 # 與向量化一致的候選鍵
 CANDIDATE_TEXT_KEYS = (
     "text",

@@ -14,15 +14,9 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-# OpenAI SDK v1.x
-# pip install "openai>=1.0.0"
 from openai import OpenAI, APIError, APITimeoutError, RateLimitError
 
-from src import PROJECT_ROOT
-
-# 取得專案根目錄，這能確保無論腳本在哪裡執行，路徑都是正確的
-# __file__ 指向目前腳本路徑，parents[3] 是因為腳本在 src/pharmacist_ai/core/ 下
-# PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
+from src import PROJECT_ROOT, OPENAI_MODEL_NAME, OPENAI_API_KEY
 
 # ---------- 固定路徑 ----------
 # 修正：所有路徑都改為基於專案根目錄
@@ -41,14 +35,6 @@ def read_text(path: Path, encoding: str = "utf-8") -> str:
 def ensure_parent_dir(path: Path) -> None:
     """確保檔案的父目錄存在"""
     path.parent.mkdir(parents=True, exist_ok=True)
-
-
-def get_env(key: str, required: bool = True) -> Optional[str]:
-    """從環境變數中讀取值，若缺失則拋出錯誤"""
-    val = os.getenv(key)
-    if required and (val is None or val.strip() == ""):
-        raise EnvironmentError(f"環境變數缺失：{key}")
-    return val
 
 
 def call_openai(
@@ -96,8 +82,8 @@ def main() -> int:
     load_dotenv()
 
     # 讀取環境變數
-    api_key = get_env("OPENAI_API_KEY", required=True)  # 使用 OPENAI_API_KEY
-    model = get_env("OPENAI_MODEL", required=True)  # e.g. gpt-4.1
+    api_key = OPENAI_API_KEY
+    model = OPENAI_MODEL_NAME
 
     # 準備 OpenAI 客戶端
     client = OpenAI(api_key=api_key)

@@ -21,10 +21,6 @@ from pathlib import Path
 
 from src import PROJECT_ROOT
 
-# 取得專案根目錄，這能確保無論腳本在哪裡執行，路徑都是正確的
-# __file__ 指向目前腳本路徑，parents[1] 是因為腳本在 src/ 下
-# PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
-
 # 修正：所有路徑都改為基於專案根目錄
 DEFAULT_QUESTION = PROJECT_ROOT / "data/interim/user_input/test_question.txt"
 DEFAULT_COMPARE = PROJECT_ROOT / "data/interim/case_annex/compare_result.txt"

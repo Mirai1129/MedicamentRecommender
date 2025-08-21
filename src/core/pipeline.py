@@ -20,10 +20,10 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Iterable, List, Dict, Any
+from typing import Iterable, List, Dict
 
-# 專案根目錄，從 src 目錄往上一層
-PROJECT_ROOT = Path(__file__).resolve().parents[2] # TODO: 這段最後要把父資料夾重新改好
+from src import PROJECT_ROOT
+
 # 將專案根目錄加入 Python 搜尋路徑，以便動態匯入
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -32,10 +32,8 @@ VEC_FILES = [
     PROJECT_ROOT / "data/processed/vector/medicine_completion/embeddings.npy",
     PROJECT_ROOT / "data/processed/vector/medicine_completion/ids.jsonl",
     PROJECT_ROOT / "data/processed/vector/medicine_completion/stats.json",
-    ]
+]
 
-# 各步驟的配置，使用你提供的字典結構
-# 這是管線的「資料」，可以獨立於執行邏輯進行修改
 PIPELINE_STEPS: List[Dict[str, str]] = [
     {
         "name": "question_extraction",
@@ -60,20 +58,24 @@ VECTOR_BUILD_STEP = {
     "module": "src.knowledge.vector_conversion"
 }
 
+
 # ----------------------------- 公用工具 ----------------------------- #
 
 class PipelineError(RuntimeError):
     """自定義管線錯誤類別"""
     pass
 
+
 def exists_all(paths: Iterable[Path]) -> bool:
     """檢查所有給定路徑是否存在"""
     return all(p.exists() for p in paths)
+
 
 def print_box(msg: str) -> None:
     """列印美觀的訊息方塊"""
     line = "─" * max(10, len(msg) + 2)
     print(f"\n┌{line}\n│ {msg}\n└{line}\n", flush=True)
+
 
 def run_step(step: Dict[str, str], dry_run: bool = False) -> None:
     """動態匯入並執行指定步驟的 main 函式"""
@@ -106,6 +108,7 @@ def run_step(step: Dict[str, str], dry_run: bool = False) -> None:
         print_box(f"FAIL {step_name}")
         raise PipelineError(f"執行 '{step_name}' 步驟時發生錯誤：{e}")
 
+
 def maybe_run_vector_build(force: bool, dry_run: bool) -> None:
     """檢查向量檔；若缺任一或強制重建，執行向量轉換步驟。"""
     need_build = force or not exists_all(VEC_FILES)
@@ -121,6 +124,7 @@ def maybe_run_vector_build(force: bool, dry_run: bool) -> None:
     else:
         print("向量檔已齊全，略過向量重建。")
 
+
 # ----------------------------- 進入點 ----------------------------- #
 
 def parse_args() -> argparse.Namespace:
@@ -129,6 +133,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--dry-run", action="store_true", help="只顯示將執行的步驟，不實際執行")
     p.add_argument("--force", action="store_true", help="強制重建向量（忽略現有檔案）")
     return p.parse_args()
+
 
 def main() -> int:
     """主函數，執行整個管線"""
@@ -162,6 +167,7 @@ def main() -> int:
         print(f"\n[未預期例外] {type(e).__name__}: {e}", file=sys.stderr)
         print_box("PIPELINE CRASHED 💥")
         return 1
+
 
 if __name__ == "__main__":
     os.environ.setdefault("PYTHONUNBUFFERED", "1")

@@ -22,45 +22,20 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
+from openai import APIError, APIConnectionError, RateLimitError
+from openai import OpenAI
+from openai.types.responses import ResponseInputTextParam
+from openai.types.responses.response_input_param import Message
 
-from src import PROJECT_ROOT
-
-try:
-    from openai import OpenAI
-    from openai import APIError, APIConnectionError, RateLimitError
-except Exception as e:  # 更精確地提醒使用者缺套件
-    print(
-        "❌ 無法匯入 OpenAI SDK。請先安裝：\n"
-        "    pip install --upgrade openai python-dotenv\n"
-        f"詳細錯誤：{e}",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+from src import PROJECT_ROOT, OPENAI_API_KEY, OPENAI_MODEL_NAME
 
 # ----------- 常量與路徑設定 -----------
-# PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
-PROMPT_PATH = PROJECT_ROOT / "prompt" / "case_extraction.txt"
-USER_INPUT_PATH = PROJECT_ROOT / "data" / "interim" / "user_input" / "test_question.txt"
-OUTPUT_PATH = PROJECT_ROOT / "data" / "interim" / "case_annex" / "extract_result.json"
+PROMPT_PATH = PROJECT_ROOT / "prompt/case_extraction.txt"
+USER_INPUT_PATH = PROJECT_ROOT / "data/interim/user_input/test_question.txt"
+OUTPUT_PATH = PROJECT_ROOT / "data/interim/case_annex/extract_result.json"
 
 MAX_RETRIES = 5
 BACKOFF_BASE_SECONDS = 1.5
-
-
-def load_env() -> tuple[str, str]:
-    """載入 .env 並回傳 (api_key, model)。支援 OPENAI_API 或 OPENAI_API_KEY。"""
-    load_dotenv()
-    api_key = os.getenv("OPENAI_API") or os.getenv("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_MODEL", "gpt-4.1")
-
-    if not api_key:
-        print(
-            "❌ 找不到 API Key。請在 .env 設定 `OPENAI_API` 或 `OPENAI_API_KEY`。",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    return api_key, model
 
 
 def read_text(path: Path, label: str) -> str:
@@ -93,8 +68,8 @@ def call_openai_responses(
     resp = client.responses.create(
         model=model,
         input=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content},
+            Message(role="system", content=[ResponseInputTextParam(text=system_prompt, type="input_text")]),
+            Message(role="user", content=[ResponseInputTextParam(text=user_content, type="input_text")])
         ],
     )
     # SDK 提供的便捷屬性，可直接取整體文字
@@ -158,7 +133,7 @@ def robust_generate(
 
 
 def main() -> None:
-    api_key, model = load_env()
+    api_key, model = OPENAI_API_KEY, OPENAI_MODEL_NAME
 
     system_prompt = read_text(PROMPT_PATH, "系統提示（prompt/case_extraction.txt）")
     user_content = read_text(USER_INPUT_PATH, "使用者輸入（test_question.txt）")
