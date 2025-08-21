@@ -1,4 +1,5 @@
 """
+text_annex.py
 將 (1) 使用者提問 與 (2) 匹配到的藥品 文本合併，輸出成指定格式。
 
 預設路徑：
@@ -18,9 +19,16 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-DEFAULT_QUESTION = Path("data/interim/user_input/test_question.txt")
-DEFAULT_COMPARE = Path("data/interim/case_annex/compare_result.txt")
-DEFAULT_OUTPUT = Path("data/interim/case_annex/annex_consequent.txt")
+from src import PROJECT_ROOT
+
+# 取得專案根目錄，這能確保無論腳本在哪裡執行，路徑都是正確的
+# __file__ 指向目前腳本路徑，parents[1] 是因為腳本在 src/ 下
+# PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
+
+# 修正：所有路徑都改為基於專案根目錄
+DEFAULT_QUESTION = PROJECT_ROOT / "data/interim/user_input/test_question.txt"
+DEFAULT_COMPARE = PROJECT_ROOT / "data/interim/case_annex/compare_result.txt"
+DEFAULT_OUTPUT = PROJECT_ROOT / "data/interim/case_annex/annex_consequent.txt"
 
 
 def read_text(path: Path) -> str:

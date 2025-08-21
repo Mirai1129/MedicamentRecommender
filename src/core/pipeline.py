@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Iterable, List, Dict, Any
 
 # 專案根目錄，從 src 目錄往上一層
-PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
+PROJECT_ROOT = Path(__file__).resolve().parents[2] # TODO: 這段最後要把父資料夾重新改好
 # 將專案根目錄加入 Python 搜尋路徑，以便動態匯入
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -39,25 +39,25 @@ VEC_FILES = [
 PIPELINE_STEPS: List[Dict[str, str]] = [
     {
         "name": "question_extraction",
-        "module": "src.pharmacist_ai.core.question_extraction"
+        "module": "src.core.question_extraction"
     },
     {
         "name": "compare",
-        "module": "src.pharmacist_ai.knowledge.compare"
+        "module": "src.knowledge.compare"
     },
     {
         "name": "text_annex",
-        "module": "src.pharmacist_ai.utils.text_annex"
+        "module": "src.utils.text_annex"
     },
     {
         "name": "llm_pharmacist",
-        "module": "src.pharmacist_ai.core.llm_pharmacist"
+        "module": "src.core.llm_pharmacist"
     }
 ]
 
 VECTOR_BUILD_STEP = {
     "name": "vector_conversion",
-    "module": "src.knowledge_process.vector_conversion"
+    "module": "src.knowledge.vector_conversion"
 }
 
 # ----------------------------- 公用工具 ----------------------------- #

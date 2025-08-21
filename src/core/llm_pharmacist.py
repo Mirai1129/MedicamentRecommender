@@ -18,9 +18,11 @@ from dotenv import load_dotenv
 # pip install "openai>=1.0.0"
 from openai import OpenAI, APIError, APITimeoutError, RateLimitError
 
+from src import PROJECT_ROOT
+
 # 取得專案根目錄，這能確保無論腳本在哪裡執行，路徑都是正確的
 # __file__ 指向目前腳本路徑，parents[3] 是因為腳本在 src/pharmacist_ai/core/ 下
-PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
+# PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
 
 # ---------- 固定路徑 ----------
 # 修正：所有路徑都改為基於專案根目錄

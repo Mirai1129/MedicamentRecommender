@@ -3,14 +3,12 @@ compare.py — 以關鍵詞陣列（extract_result.json）進行向量比對，�
 
 輸入：
   • 關鍵詞檔：data/interim/case_annex/extract_result.json
-      例如：["頭痛","特效藥","咳嗽","發燒","流感"]
   • 向量：data/processed/vector/embeddings.npy
   • 向量對應：data/processed/vector/ids.jsonl  （每行: {row, id, preview}）
   • 原始內容：data/raw/medicine_completion.jsonl（逐行 JSONL）
 
 輸出：
   • data/interim/case_annex/compare_result.txt
-     內容以「每個關鍵詞」為區塊，列出通過門檻的相似項，附排名編號、相似度、小節預覽與（可用時）完整文字。
 
 說明：
   • 相似度採 cosine，相依於 embeddings.npy 已 L2 normalize（對照 vector_conversion.py 的輸出）。
@@ -18,7 +16,7 @@ compare.py — 以關鍵詞陣列（extract_result.json）進行向量比對，�
   • 會盡量從原始 JSONL 還原對應文字。若找不到常見鍵，會輸出整行 JSON 作為 fallback。
 
 用法：
-  python -m src.knowledge_process.compare \
+  python src/knowledge_process/compare.py \
     --queries data/interim/case_annex/extract_result.json \
     --embeddings data/processed/vector/medicine_completion/embeddings.npy \
     --ids data/processed/vector/medicine_completion/ids.jsonl \
@@ -40,6 +38,11 @@ import numpy as np
 import torch
 from transformers import AutoModel, AutoTokenizer
 
+from src import PROJECT_ROOT
+
+# 取得專案根目錄，這能確保無論腳本在哪裡執行，路徑都是正確的
+# PROJECT_ROOT = Path(__file__).resolve().parents[3] # TODO: 這段最後要把父資料夾重新改好
+
 # 與向量化一致的候選鍵
 CANDIDATE_TEXT_KEYS = (
     "text",
@@ -53,6 +56,7 @@ CANDIDATE_TEXT_KEYS = (
 
 
 def find_snapshot_dir(snapshots_root: Path) -> Path:
+    """尋找實際模型快照目錄"""
     if not snapshots_root.exists():
         raise FileNotFoundError(f"Snapshots root not found: {snapshots_root}")
     if (snapshots_root / "config.json").exists():
@@ -66,6 +70,7 @@ def find_snapshot_dir(snapshots_root: Path) -> Path:
 
 
 def mean_pooling(last_hidden_state: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+    """Mean pooling to get document embeddings"""
     mask = attention_mask.unsqueeze(-1).type_as(last_hidden_state)
     summed = (last_hidden_state * mask).sum(dim=1)
     counts = mask.sum(dim=1).clamp(min=1e-9)
@@ -73,10 +78,12 @@ def mean_pooling(last_hidden_state: torch.Tensor, attention_mask: torch.Tensor) 
 
 
 def l2_normalize(x: torch.Tensor, eps: float = 1e-12) -> torch.Tensor:
+    """L2-normalize tensor"""
     return x / (x.norm(p=2, dim=-1, keepdim=True).clamp(min=eps))
 
 
 def load_ids(ids_path: Path) -> List[Dict]:
+    """載入 ids.jsonl 檔案"""
     metas: List[Dict] = []
     with ids_path.open("r", encoding="utf-8") as f:
         for line in f:
@@ -109,6 +116,7 @@ def build_row_lookup(raw_path: Path) -> Dict[int, Dict]:
 
 
 def extract_text(record: Dict) -> str:
+    """從記錄中萃取文字"""
     for k in CANDIDATE_TEXT_KEYS:
         if k in record:
             v = record[k]
@@ -117,6 +125,7 @@ def extract_text(record: Dict) -> str:
 
 
 def embed_queries(queries: List[str], model_dir: Path, device: torch.device, max_length: int = 128) -> np.ndarray:
+    """嵌入查詢關鍵字"""
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModel.from_pretrained(model_dir, add_pooling_layer=False).to(device)
     model.eval()
@@ -140,7 +149,8 @@ def search_similar(
         top_k: int = 10,
         threshold: float = 0.35,
 ) -> List[Tuple[int, float]]:
-    # 餘弦相似度 = 內積（已經 L2 normalize）
+    """搜尋相似的向量"""
+    # 餘弦相似度 = 內積（因為已經 L2 normalize）
     sims = emb_matrix @ query_vec  # [N]
     # 先用 argpartition 取前 k，再排序
     k = min(top_k, sims.shape[0])
@@ -157,15 +167,21 @@ def search_similar(
 
 
 def main():
+    """主函數，執行比較與輸出"""
     ap = argparse.ArgumentParser(description="Compare query terms to medicine embeddings and export matches.")
-    ap.add_argument("--queries", type=str, default=str(Path("data/interim/case_annex/extract_result.json")))
+    # 修正：所有路徑預設值都改為基於專案根目錄
+    ap.add_argument("--queries", type=str,
+                    default=str(PROJECT_ROOT / "data/interim/case_annex/extract_result.json"))
     ap.add_argument("--embeddings", type=str,
-                    default=str(Path("data/processed/vector/medicine_completion/embeddings.npy")))
-    ap.add_argument("--ids", type=str, default=str(Path("data/processed/vector/medicine_completion/ids.jsonl")))
-    ap.add_argument("--raw", type=str, default=str(Path("data/raw/medicine_completion.jsonl")))
-    ap.add_argument("--out", type=str, default=str(Path("data/interim/case_annex/compare_result.txt")))
+                    default=str(PROJECT_ROOT / "data/processed/vector/medicine_completion/embeddings.npy"))
+    ap.add_argument("--ids", type=str,
+                    default=str(PROJECT_ROOT / "data/processed/vector/medicine_completion/ids.jsonl"))
+    ap.add_argument("--raw", type=str,
+                    default=str(PROJECT_ROOT / "data/raw/medicine_completion.jsonl"))
+    ap.add_argument("--out", type=str,
+                    default=str(PROJECT_ROOT / "data/interim/case_annex/compare_result.txt"))
     ap.add_argument("--model-dir", type=str,
-                    default=str(Path("models/CKIP/models--ckiplab--bert-base-chinese/snapshots")))
+                    default=str(PROJECT_ROOT / "models/CKIP/models--ckiplab--bert-base-chinese/snapshots"))
     ap.add_argument("--top-k", type=int, default=10)
     ap.add_argument("--threshold", type=float, default=0.35)
     args = ap.parse_args()
