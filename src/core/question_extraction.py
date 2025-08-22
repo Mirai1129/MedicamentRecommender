@@ -12,27 +12,25 @@
 - python-dotenv
 - openai (>=1.0.0 的新 SDK；from openai import OpenAI)
 """
-
-from __future__ import annotations
-
-import os
 import sys
 import time
 from pathlib import Path
 from typing import Optional
 
-from dotenv import load_dotenv
 from openai import APIError, APIConnectionError, RateLimitError
 from openai import OpenAI
 from openai.types.responses import ResponseInputTextParam
 from openai.types.responses.response_input_param import Message
 
 from src import PROJECT_ROOT, OPENAI_API_KEY, OPENAI_MODEL_NAME
+from src.exceptions.Exceptions import PathNotFoundException
+
+# from __future__ import annotations
 
 # ----------- 常量與路徑設定 -----------
 PROMPT_PATH = PROJECT_ROOT / "prompt/case_extraction.txt"
 USER_INPUT_PATH = PROJECT_ROOT / "data/interim/user_input/test_question.txt"
-OUTPUT_PATH = PROJECT_ROOT / "data/interim/case_annex/extract_result.json"
+OUTPUT_PATH = PROJECT_ROOT / "daa/interim/case_annex/extract_result.json"
 
 MAX_RETRIES = 5
 BACKOFF_BASE_SECONDS = 1.5
@@ -41,18 +39,19 @@ BACKOFF_BASE_SECONDS = 1.5
 def read_text(path: Path, label: str) -> str:
     """讀取文字檔，若不存在則中止。"""
     if not path.exists():
-        print(f"❌ 找不到 {label} 檔案：{path}", file=sys.stderr)
-        sys.exit(1)
+        raise FileNotFoundError(f"❌ 找不到 {label} 檔案：{path}")
     try:
         return path.read_text(encoding="utf-8").strip()
     except UnicodeDecodeError:
         # 保守做法，若編碼非 UTF-8，嘗試以 cp950 之類再讀一次
+        # TODO: encoding 這邊要思考一下怎麼做
         return path.read_text(encoding="utf-8", errors="ignore").strip()
 
 
-def ensure_parent_dir(path: Path) -> None:
+def is_path_exist(path: Path) -> None:
     """確保輸出目錄存在。"""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        raise PathNotFoundException(f"path '{path}' is not found")
 
 
 def call_openai_responses(
@@ -146,7 +145,7 @@ def main() -> None:
     if not output_text:
         print("⚠️ 模型未回傳內容（空字串）。", file=sys.stderr)
 
-    ensure_parent_dir(OUTPUT_PATH)
+    is_path_exist(OUTPUT_PATH)
     OUTPUT_PATH.write_text(output_text, encoding="utf-8")
     print(f"✅ 已輸出結果：{OUTPUT_PATH}")
 
