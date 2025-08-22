@@ -19,7 +19,7 @@ from typing import Optional
 
 from openai import APIError, APIConnectionError, RateLimitError
 from openai import OpenAI
-from openai.types.responses import ResponseInputTextParam
+from openai.types.responses import ResponseInputTextParam, Response
 from openai.types.responses.response_input_param import Message
 
 from src import PROJECT_ROOT, OPENAI_API_KEY, OPENAI_MODEL_NAME
@@ -64,31 +64,21 @@ def call_openai_responses(
     回傳純文字輸出。
     """
     # 使用 Responses API（新式）。output_text 會自動將段落合併成純文字。
-    resp = client.responses.create(
+    resp: Response = client.responses.create(
         model=model,
         input=[
             Message(role="system", content=[ResponseInputTextParam(text=system_prompt, type="input_text")]),
             Message(role="user", content=[ResponseInputTextParam(text=user_content, type="input_text")])
         ],
     )
-    # SDK 提供的便捷屬性，可直接取整體文字
-    return getattr(resp, "output_text", "").strip() or _fallback_collect_text(resp)
 
+    # Response 有個 attribute 叫做 output_text，他會 return 一串 string，如果沒有東西就會是空字串
+    # return getattr(resp, "output_text").strip()
 
-def _fallback_collect_text(resp) -> str:
-    """
-    少數情況下（或 SDK 版本差異）沒有 output_text，
-    用通用結構把文字收集起來。
-    """
     try:
-        parts: list[str] = []
-        if hasattr(resp, "output") and resp.output:
-            for item in resp.output:
-                if getattr(item, "type", "") == "output_text":
-                    parts.append(getattr(item, "text", ""))
-        return "\n".join([p for p in parts if p]).strip()
-    except Exception:
-        return ""
+        return resp.output_text.strip()
+    except AttributeError:
+        raise RuntimeError("請升級 OpenAI SDK 到支援 output_text 的版本")
 
 
 def robust_generate(
