@@ -30,7 +30,7 @@ from src.exceptions.Exceptions import PathNotFoundException
 # ----------- 常量與路徑設定 -----------
 PROMPT_PATH = PROJECT_ROOT / "prompt/case_extraction.txt"
 USER_INPUT_PATH = PROJECT_ROOT / "data/interim/user_input/test_question.txt"
-OUTPUT_PATH = PROJECT_ROOT / "daa/interim/case_annex/extract_result.json"
+OUTPUT_PATH = PROJECT_ROOT / "data/interim/case_annex/extract_result.json"
 
 MAX_RETRIES = 5
 BACKOFF_BASE_SECONDS = 1.5
@@ -39,7 +39,7 @@ BACKOFF_BASE_SECONDS = 1.5
 def read_text(path: Path, label: str) -> str:
     """讀取文字檔，若不存在則中止。"""
     if not path.exists():
-        raise FileNotFoundError(f"❌ 找不到 {label} 檔案：{path}")
+        raise FileNotFoundError(f"[Error] 找不到 {label} 檔案：{path}")
     try:
         return path.read_text(encoding="utf-8").strip()
     except UnicodeDecodeError:
@@ -54,9 +54,7 @@ def is_path_exist(path: Path) -> None:
         raise PathNotFoundException(f"path '{path}' is not found")
 
 
-def call_openai_responses(
-        client: OpenAI, model: str, system_prompt: str, user_content: str
-) -> str:
+def get_openai_responses(client: OpenAI, model: str, system_prompt: str, user_content: str) -> str:
     """
     使用 Responses API 呼叫模型。
     - 將 system_prompt 放在 system role
@@ -81,56 +79,56 @@ def call_openai_responses(
         raise RuntimeError("請升級 OpenAI SDK 到支援 output_text 的版本")
 
 
-def robust_generate(
-        client: OpenAI, model: str, system_prompt: str, user_content: str
-) -> str:
+def generate_openai_response_with_retry(client: OpenAI, model: str, system_prompt: str, user_content: str) -> str:
     """帶重試的請求流程，處理網路錯誤與限速。"""
     last_err: Optional[Exception] = None
-    for attempt in range(1, MAX_RETRIES + 1):
+
+    for tried_count in range(1, MAX_RETRIES + 1):
         try:
-            return call_openai_responses(client, model, system_prompt, user_content)
-        except (RateLimitError, APIConnectionError) as e:
+            return get_openai_responses(client, model, system_prompt, user_content)
+        except Exception as e:
             last_err = e
-            sleep_s = BACKOFF_BASE_SECONDS ** attempt
+
+            if not _is_retryable_error(error=e):
+                # 為了維持基本服務，目前維持 print error 的做法
+                # TODO: 修改成 logger 形式
+                print(f"[Error] 遭遇無法重試的錯誤 ({type(e).__name__})，停止重試 {e}", file=sys.stderr)
+                break
+
+            sleep_s = BACKOFF_BASE_SECONDS ** tried_count
             print(
-                f"⚠️ 第 {attempt}/{MAX_RETRIES} 次遭遇暫時性錯誤（{type(e).__name__}）：{e}\n"
+                f"⚠️ 第 {tried_count}/{MAX_RETRIES} 次遭遇暫時性錯誤 ({type(e).__name__})：{e}\n"
                 f"   {sleep_s:.1f}s 後重試…",
                 file=sys.stderr,
             )
             time.sleep(sleep_s)
-        except APIError as e:
-            # 伺服器端錯誤可重試；若為 4xx 通常是請求錯誤，不建議無腦重試
-            last_err = e
-            status = getattr(e, "status_code", None)
-            if status and 500 <= int(status) < 600:
-                sleep_s = BACKOFF_BASE_SECONDS ** attempt
-                print(
-                    f"⚠️ 第 {attempt}/{MAX_RETRIES} 次 API 伺服器錯誤（{status}）：{e}\n"
-                    f"   {sleep_s:.1f}s 後重試…",
-                    file=sys.stderr,
-                )
-                time.sleep(sleep_s)
-            else:
-                break
-        except Exception as e:
-            last_err = e
-            break
 
-    # 全部重試失敗
-    print("❌ 產生失敗。最後錯誤：", repr(last_err), file=sys.stderr)
+    print("[Error] 產生失敗。最後錯誤：", repr(last_err), file=sys.stderr)
     sys.exit(2)
 
 
-def main() -> None:
-    api_key, model = OPENAI_API_KEY, OPENAI_MODEL_NAME
+def _is_retryable_error(error: Exception) -> bool:
+    if isinstance(error, (APIConnectionError, RateLimitError)):
+        return True
 
+    if isinstance(error, APIError):
+        try:
+            status_code = int(error.code)
+            return 500 <= status_code < 600
+        except (AttributeError, ValueError, TypeError):
+            return False
+
+    return False
+
+
+def main() -> None:
     system_prompt = read_text(PROMPT_PATH, "系統提示（prompt/case_extraction.txt）")
     user_content = read_text(USER_INPUT_PATH, "使用者輸入（test_question.txt）")
 
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(api_key=OPENAI_API_KEY)
 
     print("🚀 開始呼叫 OpenAI…", file=sys.stderr)
-    output_text = robust_generate(client, model, system_prompt, user_content)
+    output_text = generate_openai_response_with_retry(client, OPENAI_MODEL_NAME, system_prompt, user_content)
 
     if not output_text:
         print("⚠️ 模型未回傳內容（空字串）。", file=sys.stderr)
